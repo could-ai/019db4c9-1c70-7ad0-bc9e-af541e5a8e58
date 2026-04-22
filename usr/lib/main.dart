@@ -1,123 +1,334 @@
 import 'package:flutter/material.dart';
+import 'models.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const NovelApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class NovelApp extends StatefulWidget {
+  const NovelApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<NovelApp> createState() => _NovelAppState();
+}
+
+class _NovelAppState extends State<NovelApp> {
+  // Global state for 18+ Uncensored Mode
+  final ValueNotifier<bool> is18PlusMode = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    is18PlusMode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Anime Novel Reader',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.deepPurple,
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A1A),
+          elevation: 0,
+        ),
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const MyHomePage(title: 'Flutter Demo Home Page'),
-      },
+      home: StoryListScreen(is18PlusMode: is18PlusMode),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class StoryListScreen extends StatelessWidget {
+  final ValueNotifier<bool> is18PlusMode;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  const StoryListScreen({super.key, required this.is18PlusMode});
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24.0),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Settings',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ValueListenableBuilder<bool>(
+                valueListenable: is18PlusMode,
+                builder: (context, is18Plus, child) {
+                  return SwitchListTile(
+                    title: const Text(
+                      'Enable 18+ Uncensored Mode',
+                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Shows mature content and explicit descriptions.'),
+                    value: is18Plus,
+                    activeColor: Colors.redAccent,
+                    onChanged: (value) {
+                      is18PlusMode.value = value;
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Library', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => _showSettings(context),
+          )
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: mockStories.length,
+        itemBuilder: (context, index) {
+          final story = mockStories[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16.0),
+            clipBehavior: Clip.antiAlias,
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => StoryDetailScreen(
+                      story: story,
+                      is18PlusMode: is18PlusMode,
+                    ),
+                  ),
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.network(
+                    story.coverUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          story.title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'by ${story.author}',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class StoryDetailScreen extends StatelessWidget {
+  final Story story;
+  final ValueNotifier<bool> is18PlusMode;
+
+  const StoryDetailScreen({
+    super.key,
+    required this.story,
+    required this.is18PlusMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(story.title),
+      ),
+      body: SingleChildScrollView(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text('$_counter', style: Theme.of(context).textTheme.headlineMedium),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.network(
+              story.coverUrl,
+              height: 250,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Synopsis',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    story.description,
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Chapters',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: story.chapters.length,
+                    itemBuilder: (context, index) {
+                      final chapter = story.chapters[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.menu_book),
+                        title: Text(chapter.title),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReaderScreen(
+                                chapter: chapter,
+                                is18PlusMode: is18PlusMode,
+                                storyTitle: story.title,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class ReaderScreen extends StatelessWidget {
+  final Chapter chapter;
+  final String storyTitle;
+  final ValueNotifier<bool> is18PlusMode;
+
+  const ReaderScreen({
+    super.key,
+    required this.chapter,
+    required this.storyTitle,
+    required this.is18PlusMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4ECD8), // Novel paper-like background
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(storyTitle, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+            Text(chapter.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: ValueListenableBuilder<bool>(
+        valueListenable: is18PlusMode,
+        builder: (context, is18Plus, child) {
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            itemCount: chapter.blocks.length,
+            itemBuilder: (context, index) {
+              final block = chapter.blocks[index];
+              
+              if (block.is18PlusOnly && !is18Plus) {
+                return const SizedBox.shrink(); // Hide completely if not in 18+ mode
+              }
+
+              final textToShow = block.getDisplayText(is18Plus);
+              
+              if (textToShow.isEmpty) return const SizedBox.shrink();
+
+              // Add visual indicator for uncensored text if in 18+ mode
+              final isShowingUncensored = is18Plus && block.uncensoredText != null;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: Container(
+                  padding: isShowingUncensored ? const EdgeInsets.only(left: 12) : null,
+                  decoration: isShowingUncensored 
+                    ? const BoxDecoration(
+                        border: Border(
+                          left: BorderSide(color: Colors.redAccent, width: 3),
+                        ),
+                      ) 
+                    : null,
+                  child: Text(
+                    textToShow,
+                    style: const TextStyle(
+                      fontFamily: 'Georgia',
+                      fontSize: 18,
+                      height: 1.6,
+                      color: Color(0xFF2C2C2C), // Dark text for readability on paper background
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
